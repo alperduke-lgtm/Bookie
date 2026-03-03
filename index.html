@@ -17,6 +17,7 @@
             --hidden-card-bg: rgba(255, 255, 255, 0.03);
             --hidden-card-border: rgba(255, 255, 255, 0.05);
             --hidden-card-text: #606060;
+            --drag-placeholder-bg: rgba(255, 255, 255, 0.05);
         }
 
         body {
@@ -30,7 +31,7 @@
             align-items: center;
             color: var(--text-color);
             overflow-x: hidden;
-            backdrop-filter: blur(8px); /* Base blur for body, contributes to liquid glass */
+            backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
         }
 
@@ -41,7 +42,7 @@
             background: var(--bg-color);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(15px) saturate(1.8); /* Liquid glass effect for container */
+            backdrop-filter: blur(15px) saturate(1.8);
             -webkit-backdrop-filter: blur(15px) saturate(1.8);
             border: 1px solid var(--border-color);
             animation: fadeIn 0.8s ease-out;
@@ -78,7 +79,7 @@
             font-size: 1em;
             transition: background-color 0.2s ease;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            white-space: nowrap; /* Prevent text wrapping */
+            white-space: nowrap;
         }
 
         .controls button:hover {
@@ -113,9 +114,9 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px) brightness(1.1); /* Inner liquid glass */
+            backdrop-filter: blur(10px) brightness(1.1);
             -webkit-backdrop-filter: blur(10px) brightness(1.1);
-            cursor: grab; /* Indicate draggable */
+            cursor: grab;
         }
 
         .bookmark-card:hover {
@@ -143,7 +144,7 @@
             border-color: var(--hidden-card-border);
             opacity: 0.6;
             filter: grayscale(80%);
-            cursor: default; /* Not draggable when hidden */
+            cursor: default;
         }
         .bookmark-card.hidden .bookmark-title,
         .bookmark-card.hidden .bookmark-url {
@@ -156,8 +157,8 @@
         .bookmark-card.hidden.show-hidden-mode {
             opacity: 0.8;
             filter: none;
-            border-color: #606060; /* More distinct border when showing hidden */
-            cursor: grab; /* Draggable again when shown in hidden mode */
+            border-color: #606060;
+            cursor: grab;
         }
 
 
@@ -166,7 +167,7 @@
             font-weight: 700;
             color: var(--text-color);
             margin-bottom: 10px;
-            z-index: 1; /* Ensure text is above ::before pseudo-element */
+            z-index: 1;
             position: relative;
         }
 
@@ -205,7 +206,6 @@
             transform: translateY(-1px);
         }
 
-        /* Specific style for delete button */
         .bookmark-actions .delete-btn {
             background-color: #dc3545;
             box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
@@ -263,6 +263,22 @@
         .bookmark-card.drag-over {
             border: 2px dashed #ffc107; /* Highlight drop target */
         }
+        .drag-placeholder {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            padding: 0;
+            transition: all 0.3s ease;
+            background-color: var(--drag-placeholder-bg);
+            border-radius: 15px;
+            border: 1px dashed var(--primary-color);
+        }
+        .drag-placeholder.visible {
+            height: 200px;
+            margin-bottom: 20px;
+            opacity: 1;
+        }
+
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
@@ -286,7 +302,7 @@
     <div class="container">
         <h1>Clawdbot's Awesome Bookmarks</h1>
         <div class="controls">
-            <button id="toggleHiddenBtn" onclick="toggleHiddenMode()">H</button>
+            <button id="toggleHiddenBtn" onclick="toggleHiddenMode()">H (Hidden Off)</button>
             <button id="addBookmarkBtn" onclick="addBookmark()">Add Bookmark</button>
         </div>
         <div class="bookmark-grid" id="bookmarkGrid">
@@ -299,7 +315,7 @@
         const toggleHiddenBtn = document.getElementById('toggleHiddenBtn');
         let bookmarks = [];
         let draggedItem = null;
-        let showHiddenMode = false; // New state to track if hidden bookmarks are visible
+        let showHiddenMode = false;
 
         async function fetchBookmarks() {
             try {
@@ -314,9 +330,9 @@
 
         async function saveBookmarks() {
             try {
-                // Before saving, ensure IDs are sequential and up-to-date
+                // Ensure IDs are sequential and up-to-date before saving
                 bookmarks.forEach((b, index) => {
-                    b.id = index + 1; // Reassign IDs sequentially
+                    b.id = index + 1;
                 });
                 
                 await fetch('/api/bookmarks', {
@@ -334,25 +350,24 @@
         }
 
         function renderBookmarks() {
-            bookmarkGrid.innerHTML = ''; // Clear existing
+            bookmarkGrid.innerHTML = '';
             bookmarks.forEach(bookmark => {
                 const card = document.createElement('div');
                 card.className = 'bookmark-card';
                 card.setAttribute('data-id', bookmark.id);
-                card.style.setProperty('--color', bookmark.color); // Set CSS variable for gradient
+                card.style.setProperty('--color', bookmark.color);
                 
-                // Set hidden state and adjust draggable attribute
                 if (bookmark.hidden) {
                     card.classList.add('hidden');
                     if (showHiddenMode) {
                         card.classList.add('show-hidden-mode');
                         card.setAttribute('draggable', 'true');
                     } else {
-                        card.style.display = 'none'; // Completely hide if not in showHiddenMode
+                        card.style.display = 'none';
                         card.setAttribute('draggable', 'false');
                     }
                 } else {
-                    card.setAttribute('draggable', 'true'); // Only visible cards are draggable by default
+                    card.setAttribute('draggable', 'true');
                 }
 
                 card.innerHTML = `
@@ -379,7 +394,7 @@
         }
 
         function addDragAndDropListeners() {
-            const cards = document.querySelectorAll('.bookmark-card[draggable="true"]'); // Only add to draggable cards
+            const cards = document.querySelectorAll('.bookmark-card[draggable="true"]');
             cards.forEach(card => {
                 card.addEventListener('dragstart', handleDragStart);
                 card.addEventListener('dragover', handleDragOver);
@@ -389,50 +404,79 @@
             });
         }
 
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.bookmark-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: -Number.POSITIVE_INFINITY }).element;
+        }
+
+        let placeholder = null;
+
         function handleDragStart(e) {
-            // Only allow dragging if the card is not permanently hidden
             if (this.classList.contains('hidden') && !this.classList.contains('show-hidden-mode')) {
                 e.preventDefault();
                 return;
             }
             draggedItem = this;
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML); // Required for Firefox
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
             this.classList.add('dragging');
+
+            placeholder = document.createElement('div');
+            placeholder.className = 'drag-placeholder';
+            this.parentNode.insertBefore(placeholder, this.nextSibling);
+            setTimeout(() => placeholder.classList.add('visible'), 0);
         }
 
         function handleDragOver(e) {
-            e.preventDefault(); // Crucial to allow dropping
+            e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            if (this !== draggedItem && !this.classList.contains('dragging')) {
-                this.classList.add('drag-over');
+            if (draggedItem && this !== draggedItem && placeholder) {
+                const afterElement = getDragAfterElement(bookmarkGrid, e.clientY);
+                if (afterElement == null) {
+                    bookmarkGrid.appendChild(placeholder);
+                } else {
+                    bookmarkGrid.insertBefore(placeholder, afterElement);
+                }
             }
         }
 
         function handleDragLeave() {
-            this.classList.remove('drag-over');
+            // No explicit action needed for dragleave on individual cards
         }
 
         async function handleDrop(e) {
             e.preventDefault();
             this.classList.remove('drag-over');
 
-            if (draggedItem && this !== draggedItem) {
+            if (draggedItem && placeholder) {
+                placeholder.classList.remove('visible');
+                setTimeout(() => {
+                    if (placeholder && placeholder.parentNode) {
+                        placeholder.parentNode.removeChild(placeholder);
+                    }
+                    placeholder = null;
+                }, 300);
+
                 const draggedId = parseInt(draggedItem.getAttribute('data-id'));
-                const targetId = parseInt(this.getAttribute('data-id'));
+                const placeholderIndex = Array.from(bookmarkGrid.children).indexOf(placeholder);
 
-                const draggedIndex = bookmarks.findIndex(b => b.id === draggedId);
-                const targetIndex = bookmarks.findIndex(b => b.id === targetId);
+                if (placeholderIndex !== -1) {
+                    const draggedBookmarkIndex = bookmarks.findIndex(b => b.id === draggedId);
+                    const [removed] = bookmarks.splice(draggedBookmarkIndex, 1);
+                    bookmarks.splice(placeholderIndex, 0, removed);
 
-                // Reorder the bookmarks array
-                const [removed] = bookmarks.splice(draggedIndex, 1);
-                bookmarks.splice(targetIndex, 0, removed);
-
-                // Re-render immediately for visual feedback
-                renderBookmarks();
-
-                // Save the new order to the server
-                await saveBookmarks();
+                    renderBookmarks();
+                    await saveBookmarks();
+                }
             }
         }
 
@@ -442,7 +486,16 @@
             cards.forEach(card => {
                 card.classList.remove('drag-over');
             });
-            draggedItem = null; // Clear dragged item
+            if (placeholder && placeholder.parentNode) {
+                placeholder.classList.remove('visible');
+                setTimeout(() => {
+                    if (placeholder && placeholder.parentNode) {
+                        placeholder.parentNode.removeChild(placeholder);
+                    }
+                    placeholder = null;
+                }, 300);
+            }
+            draggedItem = null;
         }
 
         function editBookmark(id) {
@@ -451,8 +504,11 @@
 
             const card = bookmarkGrid.querySelector(`[data-id="${id}"]`);
             if (card) {
-                // Temporarily disable draggable during edit
                 card.setAttribute('draggable', 'false');
+                if (placeholder && placeholder.parentNode) {
+                    placeholder.parentNode.removeChild(placeholder);
+                    placeholder = null;
+                }
                 card.innerHTML = `
                     <form class="edit-form" onsubmit="saveEditedBookmark(event, ${id})">
                         <input type="text" name="title" value="${bookmark.title}" placeholder="Title" required>
@@ -473,19 +529,19 @@
                 title: form.title.value,
                 url: form.url.value,
                 color: form.color.value,
-                hidden: bookmarks.find(b => b.id === id).hidden // Preserve hidden status
+                hidden: bookmarks.find(b => b.id === id).hidden
             };
 
             const index = bookmarks.findIndex(b => b.id === id);
             if (index !== -1) {
                 bookmarks[index] = updatedBookmark;
                 await saveBookmarks();
-                renderBookmarks(); // Re-render to show updated bookmark and re-enable draggable
+                renderBookmarks();
             }
         }
 
         function cancelEdit(id) {
-            renderBookmarks(); // Re-render all to restore original card and re-enable draggable
+            renderBookmarks();
         }
 
         async function hideBookmark(id) {
@@ -507,7 +563,6 @@
         }
 
         async function addBookmark() {
-            // Find the highest existing ID and add 1 for a new unique ID
             const newId = bookmarks.length > 0 ? Math.max(...bookmarks.map(b => b.id)) + 1 : 1;
             const newBookmark = {
                 id: newId,
@@ -519,7 +574,7 @@
             bookmarks.push(newBookmark);
             await saveBookmarks();
             renderBookmarks();
-            editBookmark(newId); // Open edit form for the new bookmark immediately
+            editBookmark(newId);
         }
 
         async function deleteBookmark(id) {
@@ -532,15 +587,15 @@
 
         function toggleHiddenMode() {
             showHiddenMode = !showHiddenMode;
+            updateToggleButtonText();
             renderBookmarks();
         }
 
         function updateToggleButtonText() {
-            toggleHiddenBtn.textContent = showHiddenMode ? 'H' : 'H';
-            toggleHiddenBtn.style.backgroundColor = showHiddenMode ? '#dc3545' : '#6c757d'; // Red if showing, grey if hiding
+            toggleHiddenBtn.textContent = showHiddenMode ? 'H (Showing Hidden)' : 'H (Hidden Off)';
+            toggleHiddenBtn.style.backgroundColor = showHiddenMode ? '#dc3545' : '#6c757d';
         }
 
-        // Initial fetch when the page loads
         fetchBookmarks();
     </script>
 </body>
