@@ -399,13 +399,18 @@
                 card.addEventListener('dragstart', handleDragStart);
                 card.addEventListener('dragover', handleDragOver);
                 card.addEventListener('dragleave', handleDragLeave);
-                card.addEventListener('drop', handleDrop);
+                // Remove individual drop listener from cards, handled by grid
+                // card.addEventListener('drop', handleDrop);
                 card.addEventListener('dragend', handleDragEnd);
             });
+
+            // Add drop listener to the grid itself for more consistent behavior
+            bookmarkGrid.addEventListener('drop', handleDropOnGrid);
+            bookmarkGrid.addEventListener('dragover', handleDragOverOnGrid);
         }
 
         function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.bookmark-card:not(.dragging)')];
+            const draggableElements = [...container.querySelectorAll('.bookmark-card:not(.dragging):not(.hidden)')]; // Consider only visible, non-dragging cards
 
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
@@ -415,10 +420,11 @@
                 } else {
                     return closest;
                 }
-            }, { offset: -Number.POSITIVE_INFINITY }).element;
+            }, { offset: -Number.POSITIVE_INFINITY, element: null }).element;
         }
 
         let placeholder = null;
+        let draggedBookmarkId = null;
 
         function handleDragStart(e) {
             if (this.classList.contains('hidden') && !this.classList.contains('show-hidden-mode')) {
@@ -426,8 +432,9 @@
                 return;
             }
             draggedItem = this;
+            draggedBookmarkId = parseInt(this.getAttribute('data-id'));
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
+            e.dataTransfer.setData('text/plain', draggedBookmarkId);
             this.classList.add('dragging');
 
             placeholder = document.createElement('div');
@@ -436,54 +443,59 @@
             setTimeout(() => placeholder.classList.add('visible'), 0);
         }
 
-        function handleDragOver(e) {
+        function handleDragOverOnGrid(e) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            if (draggedItem && this !== draggedItem && placeholder) {
+            if (draggedItem && placeholder) {
                 const afterElement = getDragAfterElement(bookmarkGrid, e.clientY);
                 if (afterElement == null) {
-                    bookmarkGrid.appendChild(placeholder);
+                    if (bookmarkGrid.lastChild !== placeholder) {
+                        bookmarkGrid.appendChild(placeholder);
+                    }
                 } else {
-                    bookmarkGrid.insertBefore(placeholder, afterElement);
+                    if (afterElement !== placeholder && afterElement.previousSibling !== placeholder) {
+                         bookmarkGrid.insertBefore(placeholder, afterElement);
+                    }
                 }
             }
         }
 
-        function handleDragLeave() {
-            // No explicit action needed for dragleave on individual cards
-        }
-
-        async function handleDrop(e) {
+        async function handleDropOnGrid(e) {
             e.preventDefault();
-            this.classList.remove('drag-over');
+            
+            if (draggedItem && placeholder && draggedBookmarkId !== null) {
+                document.querySelectorAll('.bookmark-card').forEach(card => card.classList.remove('drag-over'));
 
-            if (draggedItem && placeholder) {
-                placeholder.classList.remove('visible');
-                setTimeout(() => {
-                    if (placeholder && placeholder.parentNode) {
-                        placeholder.parentNode.removeChild(placeholder);
-                    }
-                    placeholder = null;
-                }, 300);
+                const finalPlaceholderIndex = Array.from(bookmarkGrid.children).indexOf(placeholder);
 
-                const draggedId = parseInt(draggedItem.getAttribute('data-id'));
-                const placeholderIndex = Array.from(bookmarkGrid.children).indexOf(placeholder);
-
-                if (placeholderIndex !== -1) {
-                    const draggedBookmarkIndex = bookmarks.findIndex(b => b.id === draggedId);
+                const draggedBookmarkIndex = bookmarks.findIndex(b => b.id === draggedBookmarkId);
+                
+                if (draggedBookmarkIndex !== -1 && finalPlaceholderIndex !== -1) {
                     const [removed] = bookmarks.splice(draggedBookmarkIndex, 1);
-                    bookmarks.splice(placeholderIndex, 0, removed);
+                    let insertIndex = finalPlaceholderIndex;
+                    if (draggedBookmarkIndex < finalPlaceholderIndex) {
+                        insertIndex--;
+                    }
+                    if (insertIndex < 0) insertIndex = 0;
 
-                    renderBookmarks();
-                    await saveBookmarks();
+                    bookmarks.splice(insertIndex, 0, removed);
                 }
+
+                placeholder.classList.remove('visible');
+                if (placeholder && placeholder.parentNode) {
+                    placeholder.parentNode.removeChild(placeholder);
+                }
+                placeholder = null;
+                draggedBookmarkId = null;
+
+                renderBookmarks();
+                await saveBookmarks();
             }
         }
 
         function handleDragEnd() {
             this.classList.remove('dragging');
-            const cards = document.querySelectorAll('.bookmark-card');
-            cards.forEach(card => {
+            document.querySelectorAll('.bookmark-card').forEach(card => {
                 card.classList.remove('drag-over');
             });
             if (placeholder && placeholder.parentNode) {
@@ -496,6 +508,7 @@
                 }, 300);
             }
             draggedItem = null;
+            draggedBookmarkId = null;
         }
 
         function editBookmark(id) {
@@ -506,6 +519,7 @@
             if (card) {
                 card.setAttribute('draggable', 'false');
                 if (placeholder && placeholder.parentNode) {
+                    placeholder.classList.remove('visible');
                     placeholder.parentNode.removeChild(placeholder);
                     placeholder = null;
                 }
