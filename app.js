@@ -4,7 +4,7 @@ const { Pool } = require('pg'); // Import Pool from pg
 const fs = require('fs'); // Keep fs for initial setup (if needed) but will be phased out
 
 const app = express();
-const PORT = 8002;
+const PORT = process.env.PORT || 8002;
 
 // --- DATABASE CONFIGURATION ---
 // IMPORTANT: In production, this DATABASE_URL should be an environment variable on Render!
@@ -101,7 +101,6 @@ app.post('/api/bookmarks', async (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-    console.log(`Express server running on http://localhost:${PORT}`);
-    // No longer printing local IP, as it will be Render's URL
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Express server running on http://0.0.0.0:${PORT}`);
 });
